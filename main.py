@@ -1994,14 +1994,16 @@ If any information is not found, please return a null or empty string for that k
         self.output_text.setPlaceholderText("Kết quả sẽ hiển thị tại đây...")
         # Make output text expandable and set flexible minimum height
         self.output_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.output_text.setMinimumHeight(200)  # Giảm từ 250 xuống 200 để params có chỗ hơn
+        self.output_text.setMinimumHeight(150)  # Giảm xuống 150 để button có chỗ
         # Enable word wrap for better text display
         self.output_text.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
-        output_layout.addWidget(self.output_text)
+        output_layout.addWidget(self.output_text, 1)  # Stretch factor 1
         
         # Save output button
         self.save_output_btn = QPushButton("Lưu Kết Quả Ra File")
         self.save_output_btn.clicked.connect(self.save_output)
+        self.save_output_btn.setMinimumHeight(35)  # Đảm bảo button hiển thị rõ
+        self.save_output_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         output_layout.addWidget(self.save_output_btn)
         
         output_group.setLayout(output_layout)
