@@ -1619,44 +1619,120 @@ class Qwen3VLApp(QMainWindow):
         left_panel_widget.setStyleSheet("background-color: #f5f7fa;")
         left_panel_widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
         left_panel = QVBoxLayout()
-        left_panel.setSpacing(15)
-        left_panel.setContentsMargins(10, 10, 10, 10)
+        left_panel.setSpacing(12)  # Giảm spacing để compact hơn
+        left_panel.setContentsMargins(12, 12, 12, 12)  # Padding đồng đều
         
         # Model loading section
-        model_group = QGroupBox("Cấu Hình Model")
+        model_group = QGroupBox("🤖 Cấu Hình Model")
+        model_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 11pt;
+                color: #2c3e50;
+                border: 2px solid #e1e8ed;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 15px;
+                background-color: white;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
         model_layout = QVBoxLayout()
+        model_layout.setSpacing(10)  # Spacing đồng đều
+        model_layout.setContentsMargins(12, 15, 12, 12)
         
-        # Model selection
+        # Model selection - Improved layout
+        model_label = QLabel("Model:")
+        model_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 10pt;")
         model_selection_layout = QHBoxLayout()
-        model_selection_layout.addWidget(QLabel("Model:"))
+        model_selection_layout.setSpacing(8)
+        model_selection_layout.addWidget(model_label)
         self.model_combo = QComboBox()
-        self.model_combo.addItem("Model OCR mặc định", "4B")
-        self.model_combo.addItem("Model OCR nhẹ", "2B")
-        self.model_combo.setCurrentIndex(0)  # Default to 4B
+        self.model_combo.addItem("OCR mặc định (4B)", "4B")
+        self.model_combo.addItem("OCR nhẹ (2B)", "2B")
+        self.model_combo.setCurrentIndex(0)
         self.model_combo.currentIndexChanged.connect(self.on_model_changed)
-        self.model_combo.setToolTip("Chọn model: OCR mặc định (chính xác hơn) hoặc OCR nhẹ (nhanh hơn)")
+        self.model_combo.setToolTip("Chọn model:\n• OCR mặc định (4B): Chính xác hơn nhưng chậm hơn\n• OCR nhẹ (2B): Nhanh hơn nhưng kém chính xác hơn")
+        self.model_combo.setStyleSheet("""
+            QComboBox {
+                padding: 6px;
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                background-color: white;
+                font-size: 10pt;
+            }
+            QComboBox:hover {
+                border: 1px solid #3498db;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+        """)
         model_selection_layout.addWidget(self.model_combo)
         model_layout.addLayout(model_selection_layout)
         
-        self.model_label = QLabel("Model: Chưa tải")
-        self.model_label.setStyleSheet("color: #2c3e50; font-size: 9pt; font-weight: bold; padding: 5px;")
+        self.model_label = QLabel("📦 Trạng thái: Chưa tải model")
+        self.model_label.setStyleSheet("""
+            color: #7f8c8d;
+            font-size: 9pt;
+            padding: 6px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+        """)
         model_layout.addWidget(self.model_label)
         
         # Update model label based on initial selection
         self.update_model_label()
         
         # Auto-load checkbox
-        auto_load_layout = QHBoxLayout()
-        self.auto_load_checkbox = QCheckBox("Tự động load model khi khởi động (Khuyến nghị: TẮT)")
-        self.auto_load_checkbox.setChecked(False)  # Tắt mặc định để tránh crash
+        self.auto_load_checkbox = QCheckBox("⚡ Tự động load model khi khởi động")
+        self.auto_load_checkbox.setChecked(False)
         self.auto_load_checkbox.stateChanged.connect(self.on_auto_load_changed)
-        auto_load_layout.addWidget(self.auto_load_checkbox)
-        model_layout.addLayout(auto_load_layout)
+        self.auto_load_checkbox.setToolTip("Khuyến nghị: TẮT để tránh crash khi khởi động\nNếu BẬT, model sẽ tự động load khi đáp ứng đủ yêu cầu hệ thống")
+        self.auto_load_checkbox.setStyleSheet("""
+            QCheckBox {
+                font-size: 9pt;
+                color: #34495e;
+                spacing: 5px;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 2px solid #bdc3c7;
+                border-radius: 3px;
+                background-color: white;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #3498db;
+                border-color: #3498db;
+            }
+        """)
+        model_layout.addWidget(self.auto_load_checkbox)
         
-        # Device selection
+        # Device selection - Improved
+        device_label = QLabel("Thiết bị:")
+        device_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 10pt;")
         device_layout = QHBoxLayout()
-        device_layout.addWidget(QLabel("Thiết bị:"))
+        device_layout.setSpacing(8)
+        device_layout.addWidget(device_label)
         self.device_combo = QComboBox()
+        self.device_combo.setStyleSheet("""
+            QComboBox {
+                padding: 6px;
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                background-color: white;
+                font-size: 10pt;
+            }
+            QComboBox:hover {
+                border: 1px solid #3498db;
+            }
+        """)
         
         # Check GPU availability - lazy check để tăng tốc khởi động
         cuda_info = get_cuda_info()
@@ -1679,18 +1755,39 @@ class Qwen3VLApp(QMainWindow):
         self.device_info = QLabel("")
         cuda_info = get_cuda_info()
         if cuda_info['available']:
-            info_text = f"GPU: {cuda_info['device_name']} | CUDA: {cuda_info['cuda_version']} | PyTorch: {cuda_info['pytorch_version']}"
+            info_text = f"💻 {cuda_info['device_name']}\n🔧 CUDA: {cuda_info['cuda_version']} | PyTorch: {cuda_info['pytorch_version']}"
             self.device_info.setText(info_text)
             
             # Show CUDA compatibility warning if exists
             if cuda_info.get('warnings'):
-                self.device_info.setStyleSheet("color: orange; font-size: 9pt; font-weight: bold;")
+                self.device_info.setStyleSheet("""
+                    color: #e67e22;
+                    font-size: 9pt;
+                    font-weight: bold;
+                    padding: 8px;
+                    background-color: #fff3cd;
+                    border-radius: 5px;
+                    border: 1px solid #ffc107;
+                """)
                 self.device_info.setToolTip('\n'.join(cuda_info['warnings']))
             else:
-                self.device_info.setStyleSheet("color: blue; font-size: 9pt;")
+                self.device_info.setStyleSheet("""
+                    color: #27ae60;
+                    font-size: 9pt;
+                    padding: 8px;
+                    background-color: #d5f4e6;
+                    border-radius: 5px;
+                """)
         else:
-            self.device_info.setText("Chế độ CPU - Không có GPU")
-            self.device_info.setStyleSheet("color: blue; font-size: 9pt;")
+            self.device_info.setText("💻 Chế độ CPU\n⚠️ Không có GPU")
+            self.device_info.setStyleSheet("""
+                color: #7f8c8d;
+                font-size: 9pt;
+                padding: 8px;
+                background-color: #ecf0f1;
+                border-radius: 5px;
+            """)
+        self.device_info.setWordWrap(True)
         model_layout.addWidget(self.device_info)
         
         # Device recommendation label - lazy check
@@ -1700,55 +1797,156 @@ class Qwen3VLApp(QMainWindow):
             if cuda_info.get('warnings'):
                 warning_text = "⚠️ " + cuda_info['warnings'][0]
                 self.device_recommendation.setText(warning_text)
-                self.device_recommendation.setStyleSheet("color: orange; font-size: 9pt; font-weight: bold; padding: 5px; background-color: #fff3cd; border-radius: 5px;")
+                self.device_recommendation.setStyleSheet("""
+                    color: #e67e22;
+                    font-size: 9pt;
+                    font-weight: bold;
+                    padding: 8px;
+                    background-color: #fff3cd;
+                    border-radius: 5px;
+                    border: 1px solid #ffc107;
+                """)
                 self.device_recommendation.setWordWrap(True)
                 
                 # Show detailed popup warning on startup
                 QTimer.singleShot(1000, lambda: self.show_cuda_warning(cuda_info['warnings']))
             else:
-                self.device_recommendation.setText("Khuyến nghị: Sử dụng GPU để có kết quả nhanh và tốt hơn CPU")
-                self.device_recommendation.setStyleSheet("color: green; font-size: 9pt; font-weight: bold; padding: 5px;")
+                self.device_recommendation.setText("✅ Khuyến nghị: Sử dụng GPU để có kết quả nhanh và tốt hơn")
+                self.device_recommendation.setStyleSheet("""
+                    color: #27ae60;
+                    font-size: 9pt;
+                    padding: 8px;
+                    background-color: #d5f4e6;
+                    border-radius: 5px;
+                """)
         else:
-            self.device_recommendation.setText("Không có GPU - Sẽ sử dụng CPU (chậm hơn)")
-            self.device_recommendation.setStyleSheet("color: orange; font-size: 9pt; font-weight: bold; padding: 5px;")
+            self.device_recommendation.setText("⚠️ Không có GPU - Sẽ sử dụng CPU (chậm hơn)")
+            self.device_recommendation.setStyleSheet("""
+                color: #e67e22;
+                font-size: 9pt;
+                padding: 8px;
+                background-color: #fff3cd;
+                border-radius: 5px;
+            """)
+        self.device_recommendation.setWordWrap(True)
         model_layout.addWidget(self.device_recommendation)
         
-        # Buttons layout
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(10)
-        self.load_model_btn = QPushButton("Sử dụng AI này")
+        # Buttons layout - Improved styling
+        buttons_layout = QVBoxLayout()
+        buttons_layout.setSpacing(8)
+        
+        self.load_model_btn = QPushButton("🚀 Tải Model")
         self.load_model_btn.clicked.connect(self.load_model)
+        self.load_model_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                font-size: 10pt;
+                padding: 10px;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:pressed {
+                background-color: #21618c;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+                color: #7f8c8d;
+            }
+        """)
         buttons_layout.addWidget(self.load_model_btn)
         
-        self.unload_model_btn = QPushButton("Gỡ Model")
+        self.unload_model_btn = QPushButton("🗑️ Gỡ Model")
         self.unload_model_btn.clicked.connect(self.unload_model)
         self.unload_model_btn.setEnabled(False)
+        self.unload_model_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                font-weight: bold;
+                font-size: 10pt;
+                padding: 10px;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+            QPushButton:pressed {
+                background-color: #a93226;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+                color: #7f8c8d;
+            }
+        """)
         buttons_layout.addWidget(self.unload_model_btn)
         model_layout.addLayout(buttons_layout)
         
-        self.model_status = QLabel("Trạng thái: Chưa tải model")
+        self.model_status = QLabel("⏳ Trạng thái: Chưa tải model")
         self.model_status.setStyleSheet("""
-            color: #e74c3c;
+            color: #7f8c8d;
             font-size: 10pt;
             font-weight: bold;
-            padding: 8px;
+            padding: 10px;
             background-color: white;
             border: 2px solid #e1e8ed;
             border-radius: 8px;
         """)
+        self.model_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.model_status.setWordWrap(True)
         model_layout.addWidget(self.model_status)
         
         model_group.setLayout(model_layout)
         left_panel.addWidget(model_group)
         
         # Generation parameters - MOVED TO COLUMN 1
-        params_group = QGroupBox("Tham Số Generation")
+        params_group = QGroupBox("⚙️ Tham Số Generation")
+        params_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 11pt;
+                color: #2c3e50;
+                border: 2px solid #e1e8ed;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 15px;
+                background-color: white;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
         params_layout = QVBoxLayout()
+        params_layout.setSpacing(10)
+        params_layout.setContentsMargins(12, 15, 12, 12)
         
-        # Prompt selection
-        prompt_layout = QHBoxLayout()
-        prompt_layout.addWidget(QLabel("Tác vụ:"))
+        # Prompt selection - Improved
+        prompt_label = QLabel("Tác vụ:")
+        prompt_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 10pt;")
+        prompt_layout = QVBoxLayout()
+        prompt_layout.setSpacing(6)
+        prompt_layout.addWidget(prompt_label)
+        
         self.prompt_combo = QComboBox()
+        self.prompt_combo.setStyleSheet("""
+            QComboBox {
+                padding: 6px;
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                background-color: white;
+                font-size: 9pt;
+            }
+            QComboBox:hover {
+                border: 1px solid #3498db;
+            }
+        """)
         # New structured prompt for Vietnamese official documents
         default_prompt = '''You are an expert in analyzing Vietnamese official documents. Your task is to carefully read the document from the provided image(s) and extract the following specific information.
 
@@ -1766,75 +1964,186 @@ If any information is not found, please return a null or empty string for that k
         self.prompt_combo.currentTextChanged.connect(self.on_prompt_changed)
         
         # Nút điền prompt mặc định vào custom prompt
-        use_default_btn = QPushButton("Sử dụng prompt mặc định")
+        use_default_btn = QPushButton("📝 Sử dụng prompt mặc định")
         use_default_btn.clicked.connect(self.on_use_default_prompt)
+        use_default_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #95a5a6;
+                color: white;
+                font-size: 9pt;
+                padding: 6px;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #7f8c8d;
+            }
+        """)
         prompt_layout.addWidget(self.prompt_combo)
         prompt_layout.addWidget(use_default_btn)
         params_layout.addLayout(prompt_layout)
         
         # Custom prompt input
+        custom_prompt_label = QLabel("Prompt tùy chỉnh:")
+        custom_prompt_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 10pt; margin-top: 5px;")
+        params_layout.addWidget(custom_prompt_label)
+        
         self.custom_prompt = QTextEdit()
         self.custom_prompt.setPlaceholderText("Nhập prompt tùy chỉnh tại đây... (Để trống sẽ dùng prompt mặc định)")
-        self.custom_prompt.setMaximumHeight(60)
+        self.custom_prompt.setMaximumHeight(70)
+        self.custom_prompt.setStyleSheet("""
+            QTextEdit {
+                padding: 6px;
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                background-color: white;
+                font-size: 9pt;
+            }
+            QTextEdit:hover {
+                border: 1px solid #3498db;
+            }
+        """)
         params_layout.addWidget(self.custom_prompt)
         
+        # Parameters in 2-column grid for better space usage
+        params_grid = QHBoxLayout()
+        params_grid.setSpacing(8)
+        
+        # Left column
+        left_params = QVBoxLayout()
+        left_params.setSpacing(8)
+        
         # Max new tokens
+        max_tokens_label = QLabel("Số tokens tối đa:")
+        max_tokens_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 9pt;")
         max_tokens_layout = QHBoxLayout()
-        max_tokens_layout.addWidget(QLabel("Số tokens tối đa:"))
+        max_tokens_layout.addWidget(max_tokens_label)
         self.max_tokens_spin = QSpinBox()
         self.max_tokens_spin.setRange(1, 16384)
         self.max_tokens_spin.setValue(3000)
-        self.max_tokens_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        self.max_tokens_spin.setMinimumWidth(120)
+        self.max_tokens_spin.setStyleSheet("""
+            QSpinBox {
+                padding: 5px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                background-color: white;
+                font-size: 9pt;
+            }
+            QSpinBox:hover {
+                border: 1px solid #3498db;
+            }
+        """)
         max_tokens_layout.addWidget(self.max_tokens_spin)
-        max_tokens_layout.addStretch()  # Push to left
-        params_layout.addLayout(max_tokens_layout)
+        left_params.addLayout(max_tokens_layout)
         
         # Temperature
+        temp_label = QLabel("Temperature:")
+        temp_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 9pt;")
         temp_layout = QHBoxLayout()
-        temp_layout.addWidget(QLabel("Temperature:"))
+        temp_layout.addWidget(temp_label)
         self.temperature_spin = QDoubleSpinBox()
         self.temperature_spin.setRange(0.0, 2.0)
         self.temperature_spin.setSingleStep(0.1)
         self.temperature_spin.setValue(0.2)
-        self.temperature_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        self.temperature_spin.setMinimumWidth(120)
+        self.temperature_spin.setStyleSheet("""
+            QDoubleSpinBox {
+                padding: 5px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                background-color: white;
+                font-size: 9pt;
+            }
+            QDoubleSpinBox:hover {
+                border: 1px solid #3498db;
+            }
+        """)
         temp_layout.addWidget(self.temperature_spin)
-        temp_layout.addStretch()  # Push to left
-        params_layout.addLayout(temp_layout)
+        left_params.addLayout(temp_layout)
         
         # Top-p
+        top_p_label = QLabel("Top-p:")
+        top_p_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 9pt;")
         top_p_layout = QHBoxLayout()
-        top_p_layout.addWidget(QLabel("Top-p:"))
+        top_p_layout.addWidget(top_p_label)
         self.top_p_spin = QDoubleSpinBox()
         self.top_p_spin.setRange(0.0, 1.0)
         self.top_p_spin.setSingleStep(0.1)
         self.top_p_spin.setValue(0.8)
-        self.top_p_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        self.top_p_spin.setMinimumWidth(120)
+        self.top_p_spin.setStyleSheet("""
+            QDoubleSpinBox {
+                padding: 5px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                background-color: white;
+                font-size: 9pt;
+            }
+            QDoubleSpinBox:hover {
+                border: 1px solid #3498db;
+            }
+        """)
         top_p_layout.addWidget(self.top_p_spin)
-        top_p_layout.addStretch()  # Push to left
-        params_layout.addLayout(top_p_layout)
+        left_params.addLayout(top_p_layout)
+        
+        # Right column
+        right_params = QVBoxLayout()
+        right_params.setSpacing(8)
         
         # Top-k
+        top_k_label = QLabel("Top-k:")
+        top_k_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 9pt;")
         top_k_layout = QHBoxLayout()
-        top_k_layout.addWidget(QLabel("Top-k:"))
+        top_k_layout.addWidget(top_k_label)
         self.top_k_spin = QSpinBox()
         self.top_k_spin.setRange(1, 100)
         self.top_k_spin.setValue(20)
-        self.top_k_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        self.top_k_spin.setMinimumWidth(120)
+        self.top_k_spin.setStyleSheet("""
+            QSpinBox {
+                padding: 5px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                background-color: white;
+                font-size: 9pt;
+            }
+            QSpinBox:hover {
+                border: 1px solid #3498db;
+            }
+        """)
         top_k_layout.addWidget(self.top_k_spin)
-        top_k_layout.addStretch()  # Push to left
-        params_layout.addLayout(top_k_layout)
+        right_params.addLayout(top_k_layout)
         
         # Repetition penalty
+        rep_penalty_label = QLabel("Hệ số lặp lại:")
+        rep_penalty_label.setStyleSheet("font-weight: bold; color: #34495e; font-size: 9pt;")
         rep_penalty_layout = QHBoxLayout()
-        rep_penalty_layout.addWidget(QLabel("Hệ số lặp lại:"))
+        rep_penalty_layout.addWidget(rep_penalty_label)
         self.rep_penalty_spin = QDoubleSpinBox()
         self.rep_penalty_spin.setRange(1.0, 2.0)
         self.rep_penalty_spin.setSingleStep(0.1)
         self.rep_penalty_spin.setValue(1.0)
-        self.rep_penalty_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        self.rep_penalty_spin.setMinimumWidth(120)
+        self.rep_penalty_spin.setStyleSheet("""
+            QDoubleSpinBox {
+                padding: 5px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                background-color: white;
+                font-size: 9pt;
+            }
+            QDoubleSpinBox:hover {
+                border: 1px solid #3498db;
+            }
+        """)
         rep_penalty_layout.addWidget(self.rep_penalty_spin)
-        rep_penalty_layout.addStretch()  # Push to left
-        params_layout.addLayout(rep_penalty_layout)
+        right_params.addLayout(rep_penalty_layout)
+        
+        # Add left and right columns to grid
+        params_grid.addLayout(left_params)
+        params_grid.addLayout(right_params)
+        params_layout.addLayout(params_grid)
         
         params_group.setLayout(params_layout)
         left_panel.addWidget(params_group)
