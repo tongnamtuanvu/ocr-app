@@ -1192,6 +1192,7 @@ class Qwen3VLApp(QMainWindow):
                     file_name TEXT NOT NULL,
                     file_type TEXT NOT NULL,
                     ocr_result TEXT NOT NULL,
+                    ocr_result_json TEXT,
                     preview_image_path TEXT,
                     timestamp TEXT NOT NULL,
                     model_used TEXT,
@@ -1243,15 +1244,34 @@ class Qwen3VLApp(QMainWindow):
                 if self.current_image_path and os.path.exists(self.current_image_path):
                     preview_image_path = self.create_thumbnail(self.current_image_path)
             
+            # Try to parse JSON from OCR result
+            ocr_result_json = None
+            try:
+                # Try to extract JSON from result (in case there's extra text)
+                result_text = ocr_result.strip()
+                # Find JSON object in the result
+                if '{' in result_text and '}' in result_text:
+                    json_start = result_text.find('{')
+                    json_end = result_text.rfind('}') + 1
+                    json_str = result_text[json_start:json_end]
+                    # Validate it's valid JSON
+                    import json
+                    parsed = json.loads(json_str)
+                    ocr_result_json = json.dumps(parsed, ensure_ascii=False, indent=2)
+                    print(f"[Database] Đã phân tích JSON từ kết quả OCR")
+            except Exception as json_error:
+                print(f"[Database] Không thể phân tích JSON từ kết quả: {json_error}")
+                # Keep ocr_result_json as None if parsing fails
+            
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
                 INSERT INTO ocr_history 
-                (file_path, file_name, file_type, ocr_result, preview_image_path, 
+                (file_path, file_name, file_type, ocr_result, ocr_result_json, preview_image_path, 
                  timestamp, model_used, processing_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (file_path, file_name, file_type, ocr_result, preview_image_path,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (file_path, file_name, file_type, ocr_result, ocr_result_json, preview_image_path,
                   timestamp, model_used, processing_time))
             
             conn.commit()
@@ -1275,7 +1295,7 @@ class Qwen3VLApp(QMainWindow):
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT id, file_path, file_name, file_type, ocr_result, 
+                SELECT id, file_path, file_name, file_type, ocr_result, ocr_result_json,
                        preview_image_path, timestamp, model_used, processing_time
                 FROM ocr_history
                 ORDER BY timestamp DESC
@@ -1293,10 +1313,11 @@ class Qwen3VLApp(QMainWindow):
                     'file_name': row[2],
                     'file_type': row[3],
                     'ocr_result': row[4],
-                    'preview_image_path': row[5],
-                    'timestamp': row[6],
-                    'model_used': row[7],
-                    'processing_time': row[8]
+                    'ocr_result_json': row[5],
+                    'preview_image_path': row[6],
+                    'timestamp': row[7],
+                    'model_used': row[8],
+                    'processing_time': row[9]
                 })
             
             return history_list
@@ -1469,6 +1490,60 @@ class Qwen3VLApp(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         central_widget.setLayout(main_layout)
+        
+        # Top control bar for fullscreen mode
+        control_bar = QWidget()
+        control_bar.setStyleSheet("background-color: #2c3e50; padding: 5px;")
+        control_bar_layout = QHBoxLayout()
+        control_bar_layout.setContentsMargins(10, 5, 10, 5)
+        control_bar.setLayout(control_bar_layout)
+        
+        # App title
+        app_title = QLabel("Ứng Dụng OCR")
+        app_title.setStyleSheet("color: white; font-size: 14pt; font-weight: bold;")
+        control_bar_layout.addWidget(app_title)
+        
+        control_bar_layout.addStretch()
+        
+        # Exit fullscreen button
+        self.exit_fullscreen_btn = QPushButton("🗗 Thoát Fullscreen")
+        self.exit_fullscreen_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        self.exit_fullscreen_btn.clicked.connect(self.exit_fullscreen)
+        self.exit_fullscreen_btn.setToolTip("Nhấn để thoát chế độ fullscreen (hoặc nhấn ESC)")
+        control_bar_layout.addWidget(self.exit_fullscreen_btn)
+        
+        # Close app button
+        close_app_btn = QPushButton("✕ Đóng Ứng Dụng")
+        close_app_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+        """)
+        close_app_btn.clicked.connect(self.close)
+        close_app_btn.setToolTip("Đóng ứng dụng (hoặc nhấn Alt+F4)")
+        control_bar_layout.addWidget(close_app_btn)
+        
+        main_layout.addWidget(control_bar)
         
         # Tab widget
         self.tab_widget = QTabWidget()
@@ -1772,7 +1847,19 @@ class Qwen3VLApp(QMainWindow):
         prompt_layout = QHBoxLayout()
         prompt_layout.addWidget(QLabel("Tác vụ:"))
         self.prompt_combo = QComboBox()
-        self.prompt_combo.addItem("Hãy OCR hình ảnh/file này trả về tiếng Việt cho tôi không sai lỗi chính tả")
+        # New structured prompt for Vietnamese official documents
+        default_prompt = '''You are an expert in analyzing Vietnamese official documents. Your task is to carefully read the document from the provided image(s) and extract the following specific information.
+
+Please return the output in a structured JSON format. The JSON object should contain the following keys:
+
+- "loai_van_ban": The type of the document (e.g., "Nghị định", "Quyết định", "Thông tư", "Công văn").
+- "so_ky_hieu": The official reference number of the document.
+- "trich_yeu": A brief summary or subject of the document's content ("Trích yếu nội dung").
+- "co_quan_ban_hanh": The name of the issuing authority or organization.
+- "ngay_ban_hanh": The date of issue in "dd/mm/yyyy" format.
+
+If any information is not found, please return a null or empty string for that key. Do not add any extra text or explanations outside of the JSON object.'''
+        self.prompt_combo.addItem(default_prompt)
         self.prompt_combo.setEditable(False)  # Không cho phép chỉnh sửa
         self.prompt_combo.currentTextChanged.connect(self.on_prompt_changed)
         
@@ -2117,10 +2204,17 @@ class Qwen3VLApp(QMainWindow):
             info_text += f"Thời gian xử lý: {data['processing_time']:.2f}s"
         self.history_info_label.setText(info_text)
         
-        # Hiển thị OCR result
+        # Hiển thị OCR result - ưu tiên JSON nếu có
         self.current_editing_history_id = data.get('id')
-        self.original_history_result = data.get('ocr_result', '')
-        self.history_result_text.setText(self.original_history_result)
+        
+        # Try to display JSON if available
+        if data.get('ocr_result_json'):
+            self.original_history_result = data.get('ocr_result_json', '')
+            self.history_result_text.setText(self.original_history_result)
+        else:
+            # Fallback to text result
+            self.original_history_result = data.get('ocr_result', '')
+            self.history_result_text.setText(self.original_history_result)
         
         # Enable/disable buttons
         self.save_history_btn.setEnabled(False)
@@ -3501,6 +3595,7 @@ class Qwen3VLApp(QMainWindow):
     def on_processing_finished(self, result):
         """Xử lý khi OCR hoàn thành"""
         # Calculate processing time
+        elapsed_time = None
         if self.processing_start_time:
             elapsed_time = time.time() - self.processing_start_time
             hours = int(elapsed_time // 3600)
@@ -3533,16 +3628,20 @@ class Qwen3VLApp(QMainWindow):
         # Re-enable button
         self.process_btn.setEnabled(True)
         
-        # Lưu vào lịch sử
+        # Auto-save to database
         if self.current_file_path and result:
-            processing_time = elapsed_time if self.processing_start_time else None
-            self.save_history(
-                file_path=self.current_file_path,
-                file_type=self.current_file_type or 'image',
-                ocr_result=result,
-                processing_time=processing_time
-            )
-            self.processing_start_time = None
+            try:
+                self.save_history(
+                    file_path=self.current_file_path,
+                    file_type=self.current_file_type or 'image',
+                    ocr_result=result,
+                    processing_time=elapsed_time
+                )
+                print(f"[Auto-Save] Đã tự động lưu kết quả OCR vào database")
+            except Exception as save_error:
+                print(f"[Auto-Save] Lỗi khi tự động lưu: {save_error}")
+        
+        self.processing_start_time = None
         
         # Cleanup temp files từ ROI crop
         if hasattr(self, 'processing_temp_files'):
@@ -3673,6 +3772,40 @@ class Qwen3VLApp(QMainWindow):
                 self.progress_label.setStyleSheet("color: red; font-size: 10pt;")
 
 
+    def exit_fullscreen(self):
+        """Exit fullscreen mode"""
+        self.showNormal()
+        # Update button visibility or text
+        if hasattr(self, 'exit_fullscreen_btn'):
+            self.exit_fullscreen_btn.setText("🗖 Fullscreen")
+            self.exit_fullscreen_btn.disconnect()
+            self.exit_fullscreen_btn.clicked.connect(self.enter_fullscreen)
+    
+    def enter_fullscreen(self):
+        """Enter fullscreen mode"""
+        self.showFullScreen()
+        # Update button visibility or text
+        if hasattr(self, 'exit_fullscreen_btn'):
+            self.exit_fullscreen_btn.setText("🗗 Thoát Fullscreen")
+            self.exit_fullscreen_btn.disconnect()
+            self.exit_fullscreen_btn.clicked.connect(self.exit_fullscreen)
+    
+    def keyPressEvent(self, event):
+        """Handle keyboard shortcuts"""
+        from PyQt6.QtCore import Qt
+        # ESC to exit fullscreen
+        if event.key() == Qt.Key.Key_Escape:
+            if self.isFullScreen():
+                self.exit_fullscreen()
+        # F11 to toggle fullscreen
+        elif event.key() == Qt.Key.Key_F11:
+            if self.isFullScreen():
+                self.exit_fullscreen()
+            else:
+                self.enter_fullscreen()
+        else:
+            super().keyPressEvent(event)
+    
     def closeEvent(self, event):
         """Clean up temp files on close"""
         self.cleanup_temp_files()
