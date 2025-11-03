@@ -1915,7 +1915,9 @@ If any information is not found, please return a null or empty string for that k
         self.max_tokens_spin = QSpinBox()
         self.max_tokens_spin.setRange(1, 16384)
         self.max_tokens_spin.setValue(3000)
+        self.max_tokens_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
         max_tokens_layout.addWidget(self.max_tokens_spin)
+        max_tokens_layout.addStretch()  # Push to left
         params_layout.addLayout(max_tokens_layout)
         
         # Temperature
@@ -1925,7 +1927,9 @@ If any information is not found, please return a null or empty string for that k
         self.temperature_spin.setRange(0.0, 2.0)
         self.temperature_spin.setSingleStep(0.1)
         self.temperature_spin.setValue(0.2)
+        self.temperature_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
         temp_layout.addWidget(self.temperature_spin)
+        temp_layout.addStretch()  # Push to left
         params_layout.addLayout(temp_layout)
         
         # Top-p
@@ -1935,7 +1939,9 @@ If any information is not found, please return a null or empty string for that k
         self.top_p_spin.setRange(0.0, 1.0)
         self.top_p_spin.setSingleStep(0.1)
         self.top_p_spin.setValue(0.8)
+        self.top_p_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
         top_p_layout.addWidget(self.top_p_spin)
+        top_p_layout.addStretch()  # Push to left
         params_layout.addLayout(top_p_layout)
         
         # Top-k
@@ -1944,7 +1950,9 @@ If any information is not found, please return a null or empty string for that k
         self.top_k_spin = QSpinBox()
         self.top_k_spin.setRange(1, 100)
         self.top_k_spin.setValue(20)
+        self.top_k_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
         top_k_layout.addWidget(self.top_k_spin)
+        top_k_layout.addStretch()  # Push to left
         params_layout.addLayout(top_k_layout)
         
         # Repetition penalty
@@ -1954,7 +1962,9 @@ If any information is not found, please return a null or empty string for that k
         self.rep_penalty_spin.setRange(1.0, 2.0)
         self.rep_penalty_spin.setSingleStep(0.1)
         self.rep_penalty_spin.setValue(1.0)
+        self.rep_penalty_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
         rep_penalty_layout.addWidget(self.rep_penalty_spin)
+        rep_penalty_layout.addStretch()  # Push to left
         params_layout.addLayout(rep_penalty_layout)
         
         params_group.setLayout(params_layout)
