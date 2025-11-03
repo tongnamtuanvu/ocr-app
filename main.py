@@ -1273,9 +1273,14 @@ class Qwen3VLApp(QMainWindow):
                     import json
                     parsed = json.loads(json_str)
                     ocr_result_json = json.dumps(parsed, ensure_ascii=False, indent=2)
-                    print(f"[Database] Đã phân tích JSON từ kết quả OCR")
+                    print(f"[Database] Đã phân tích JSON từ kết quả OCR: {len(ocr_result_json)} ký tự")
+                else:
+                    print(f"[Database] Không tìm thấy JSON trong kết quả OCR (không có {{ hoặc }})")
+            except json.JSONDecodeError as json_error:
+                print(f"[Database] JSON không hợp lệ: {json_error}")
+                print(f"[Database] JSON string: {json_str[:200] if 'json_str' in locals() else 'N/A'}...")
             except Exception as json_error:
-                print(f"[Database] Không thể phân tích JSON từ kết quả: {json_error}")
+                print(f"[Database] Lỗi khi phân tích JSON từ kết quả: {json_error}")
                 # Keep ocr_result_json as None if parsing fails
             
             conn = sqlite3.connect(self.db_path)
@@ -4135,15 +4140,25 @@ If any information is not found, please return a null or empty string for that k
         # Auto-save to database
         if self.current_file_path and result:
             try:
-                self.save_history(
+                history_id = self.save_history(
                     file_path=self.current_file_path,
                     file_type=self.current_file_type or 'image',
                     ocr_result=result,
                     processing_time=elapsed_time
                 )
-                print(f"[Auto-Save] Đã tự động lưu kết quả OCR vào database")
+                if history_id:
+                    print(f"[Auto-Save] Đã tự động lưu kết quả OCR vào database (ID: {history_id})")
+                else:
+                    print(f"[Auto-Save] Cảnh báo: save_history trả về None")
             except Exception as save_error:
+                import traceback
                 print(f"[Auto-Save] Lỗi khi tự động lưu: {save_error}")
+                print(f"[Auto-Save] Traceback: {traceback.format_exc()}")
+        else:
+            if not self.current_file_path:
+                print(f"[Auto-Save] Bỏ qua: current_file_path không được set")
+            if not result:
+                print(f"[Auto-Save] Bỏ qua: result rỗng")
         
         self.processing_start_time = None
         
