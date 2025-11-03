@@ -2570,9 +2570,22 @@ If any information is not found, please return a null or empty string for that k
         # Thêm History tab vào tab widget
         self.tab_widget.addTab(history_tab, "Lịch Sử")
         
+        # Connect tab change signal để refresh history khi chuyển tab
+        self.tab_widget.currentChanged.connect(self.on_tab_changed)
+        
         # Load history lần đầu
         self.refresh_history()
         
+    def on_tab_changed(self, index):
+        """Xử lý khi chuyển tab - refresh history nếu chuyển sang History tab"""
+        try:
+            tab_text = self.tab_widget.tabText(index)
+            if tab_text == "Lịch Sử":
+                print(f"[History] Chuyển sang History tab, refresh history...")
+                self.refresh_history()
+        except Exception as e:
+            print(f"[History] Lỗi khi refresh history khi chuyển tab: {e}")
+    
     def on_history_item_clicked(self, item):
         """Xử lý khi click vào item trong history list"""
         data = item.data(Qt.ItemDataRole.UserRole)
