@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                               QDoubleSpinBox, QCheckBox, QComboBox, QMessageBox,
                               QProgressDialog, QTabWidget, QListWidget, QListWidgetItem,
                               QSplitter, QScrollArea, QSizePolicy)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize, QRect, QPoint
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize, QRect, QPoint, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor
 # Lazy import torch and transformers để tăng tốc khởi động
 # Chỉ import khi cần load model
@@ -56,15 +56,30 @@ def get_cuda_info():
     try:
         torch = get_torch()
         if torch.cuda.is_available():
+            cuda_version = torch.version.cuda
+            pytorch_version = torch.__version__
+            
+            # Check CUDA compatibility
+            warnings = []
+            if cuda_version:
+                cuda_major = float('.'.join(cuda_version.split('.')[:2]))
+                # PyTorch typically supports CUDA 11.8 and 12.1
+                if cuda_major >= 13.0:
+                    warnings.append(f"CUDA {cuda_version} có thể không được PyTorch {pytorch_version} hỗ trợ chính thức. Khuyến nghị CUDA 11.8 hoặc 12.1.")
+                elif cuda_major < 11.0:
+                    warnings.append(f"CUDA {cuda_version} quá cũ. Khuyến nghị CUDA 11.8 hoặc 12.1.")
+            
             return {
                 'available': True,
                 'device_name': torch.cuda.get_device_name(0),
-                'cuda_version': torch.version.cuda,
-                'gpu_memory': torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                'cuda_version': cuda_version,
+                'pytorch_version': pytorch_version,
+                'gpu_memory': torch.cuda.get_device_properties(0).total_memory / (1024**3),
+                'warnings': warnings
             }
-    except:
-        pass
-    return {'available': False}
+    except Exception as e:
+        print(f"[CUDA] Error getting CUDA info: {e}")
+    return {'available': False, 'warnings': []}
 
 # System check
 try:
@@ -1664,17 +1679,35 @@ class Qwen3VLApp(QMainWindow):
         self.device_info = QLabel("")
         cuda_info = get_cuda_info()
         if cuda_info['available']:
-            self.device_info.setText(f"GPU: {cuda_info['device_name']} | CUDA: {cuda_info['cuda_version']}")
+            info_text = f"GPU: {cuda_info['device_name']} | CUDA: {cuda_info['cuda_version']} | PyTorch: {cuda_info['pytorch_version']}"
+            self.device_info.setText(info_text)
+            
+            # Show CUDA compatibility warning if exists
+            if cuda_info.get('warnings'):
+                self.device_info.setStyleSheet("color: orange; font-size: 9pt; font-weight: bold;")
+                self.device_info.setToolTip('\n'.join(cuda_info['warnings']))
+            else:
+                self.device_info.setStyleSheet("color: blue; font-size: 9pt;")
         else:
             self.device_info.setText("Chế độ CPU - Không có GPU")
-        self.device_info.setStyleSheet("color: blue; font-size: 9pt;")
+            self.device_info.setStyleSheet("color: blue; font-size: 9pt;")
         model_layout.addWidget(self.device_info)
         
         # Device recommendation label - lazy check
         self.device_recommendation = QLabel("")
         if cuda_info['available']:
-            self.device_recommendation.setText("Khuyến nghị: Sử dụng GPU để có kết quả nhanh và tốt hơn CPU")
-            self.device_recommendation.setStyleSheet("color: green; font-size: 9pt; font-weight: bold; padding: 5px;")
+            # Check for CUDA warnings
+            if cuda_info.get('warnings'):
+                warning_text = "⚠️ " + cuda_info['warnings'][0]
+                self.device_recommendation.setText(warning_text)
+                self.device_recommendation.setStyleSheet("color: orange; font-size: 9pt; font-weight: bold; padding: 5px; background-color: #fff3cd; border-radius: 5px;")
+                self.device_recommendation.setWordWrap(True)
+                
+                # Show detailed popup warning on startup
+                QTimer.singleShot(1000, lambda: self.show_cuda_warning(cuda_info['warnings']))
+            else:
+                self.device_recommendation.setText("Khuyến nghị: Sử dụng GPU để có kết quả nhanh và tốt hơn CPU")
+                self.device_recommendation.setStyleSheet("color: green; font-size: 9pt; font-weight: bold; padding: 5px;")
         else:
             self.device_recommendation.setText("Không có GPU - Sẽ sử dụng CPU (chậm hơn)")
             self.device_recommendation.setStyleSheet("color: orange; font-size: 9pt; font-weight: bold; padding: 5px;")
@@ -2345,6 +2378,157 @@ If any information is not found, please return a null or empty string for that k
         elif action == view_action:
             self.on_history_item_clicked(item)
         
+    def show_cuda_warning(self, warnings):
+        """Show CUDA compatibility warning popup with auto-fix option"""
+        if not warnings:
+            return
+        
+        cuda_info = get_cuda_info()
+        
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setWindowTitle("Cảnh Báo Tương Thích CUDA")
+        
+        warning_text = "<h3>⚠️ Phát Hiện Vấn Đề Tương Thích CUDA</h3>"
+        warning_text += "<p><b>Thông tin hệ thống:</b></p>"
+        warning_text += "<ul>"
+        if cuda_info.get('device_name'):
+            warning_text += f"<li>GPU: {cuda_info['device_name']}</li>"
+        if cuda_info.get('cuda_version'):
+            warning_text += f"<li>CUDA Version: {cuda_info['cuda_version']}</li>"
+        if cuda_info.get('pytorch_version'):
+            warning_text += f"<li>PyTorch Version: {cuda_info['pytorch_version']}</li>"
+        warning_text += "</ul>"
+        
+        warning_text += "<p><b>Vấn đề:</b></p>"
+        warning_text += "<ul>"
+        for warning in warnings:
+            warning_text += f"<li>{warning}</li>"
+        warning_text += "</ul>"
+        
+        warning_text += "<p><b>Khuyến nghị:</b> Cài đặt PyTorch tương thích với CUDA 12.1 hoặc 11.8 để đảm bảo hoạt động ổn định.</p>"
+        warning_text += "<p><b>Bạn có muốn tự động cài đặt PyTorch phiên bản tương thích không?</b></p>"
+        
+        msg.setText(warning_text)
+        
+        # Add buttons
+        install_121_btn = msg.addButton("Cài PyTorch CUDA 12.1", QMessageBox.ButtonRole.AcceptRole)
+        install_118_btn = msg.addButton("Cài PyTorch CUDA 11.8", QMessageBox.ButtonRole.AcceptRole)
+        skip_btn = msg.addButton("Bỏ Qua (Tiếp Tục Dùng)", QMessageBox.ButtonRole.RejectRole)
+        
+        msg.exec()
+        
+        clicked_button = msg.clickedButton()
+        
+        if clicked_button == install_121_btn:
+            self.install_pytorch_compatible("cu121")
+        elif clicked_button == install_118_btn:
+            self.install_pytorch_compatible("cu118")
+        # If skip, do nothing
+    
+    def install_pytorch_compatible(self, cuda_version):
+        """Install compatible PyTorch version"""
+        import subprocess
+        
+        # Show progress dialog
+        progress = QProgressDialog("Đang cài đặt PyTorch tương thích...", "Hủy", 0, 0, self)
+        progress.setWindowTitle("Cài Đặt PyTorch")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setCancelButton(None)  # Disable cancel
+        progress.show()
+        QApplication.processEvents()
+        
+        try:
+            # Prepare command
+            if cuda_version == "cu121":
+                cmd = [
+                    sys.executable, "-m", "pip", "install", 
+                    "torch", "torchvision", "torchaudio",
+                    "--index-url", "https://download.pytorch.org/whl/cu121",
+                    "--upgrade"
+                ]
+                version_name = "CUDA 12.1"
+            else:  # cu118
+                cmd = [
+                    sys.executable, "-m", "pip", "install",
+                    "torch", "torchvision", "torchaudio", 
+                    "--index-url", "https://download.pytorch.org/whl/cu118",
+                    "--upgrade"
+                ]
+                version_name = "CUDA 11.8"
+            
+            progress.setLabelText(f"Đang tải và cài đặt PyTorch cho {version_name}...\nQuá trình này có thể mất vài phút.")
+            QApplication.processEvents()
+            
+            # Run pip install
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 minutes timeout
+            )
+            
+            progress.close()
+            
+            if result.returncode == 0:
+                # Success
+                msg = QMessageBox(self)
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setWindowTitle("Thành Công")
+                msg.setText(
+                    f"<h3>✅ Đã cài đặt PyTorch cho {version_name} thành công!</h3>"
+                    f"<p><b>Vui lòng khởi động lại ứng dụng để áp dụng thay đổi.</b></p>"
+                    f"<p>Sau khi khởi động lại, cảnh báo CUDA sẽ không còn xuất hiện.</p>"
+                )
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg.exec()
+                
+                # Optionally restart app
+                restart_msg = QMessageBox(self)
+                restart_msg.setIcon(QMessageBox.Icon.Question)
+                restart_msg.setWindowTitle("Khởi Động Lại?")
+                restart_msg.setText("Bạn có muốn khởi động lại ứng dụng ngay bây giờ không?")
+                restart_msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                
+                if restart_msg.exec() == QMessageBox.StandardButton.Yes:
+                    # Restart application
+                    QApplication.quit()
+                    os.execl(sys.executable, sys.executable, *sys.argv)
+            else:
+                # Error
+                error_msg = QMessageBox(self)
+                error_msg.setIcon(QMessageBox.Icon.Critical)
+                error_msg.setWindowTitle("Lỗi Cài Đặt")
+                error_text = f"<h3>❌ Không thể cài đặt PyTorch</h3>"
+                error_text += f"<p><b>Lỗi:</b></p>"
+                error_text += f"<pre>{result.stderr[:500]}</pre>"
+                error_text += f"<p><b>Giải pháp:</b></p>"
+                error_text += f"<ol>"
+                error_text += f"<li>Mở Command Prompt/Terminal với quyền Administrator</li>"
+                error_text += f"<li>Chạy lệnh sau:</li>"
+                error_text += f"</ol>"
+                error_text += f"<code>{' '.join(cmd)}</code>"
+                error_msg.setText(error_text)
+                error_msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                error_msg.exec()
+                
+        except subprocess.TimeoutExpired:
+            progress.close()
+            QMessageBox.warning(
+                self,
+                "Timeout",
+                "Quá trình cài đặt quá lâu (>10 phút). Vui lòng cài đặt thủ công:\n\n"
+                f"{' '.join(cmd)}"
+            )
+        except Exception as e:
+            progress.close()
+            QMessageBox.critical(
+                self,
+                "Lỗi",
+                f"Đã xảy ra lỗi khi cài đặt:\n\n{str(e)}\n\n"
+                f"Vui lòng cài đặt thủ công:\n{' '.join(cmd)}"
+            )
+    
     def on_model_changed(self, index):
         """Handle model selection change"""
         selected_model = self.model_combo.currentData()
