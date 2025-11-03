@@ -1215,11 +1215,28 @@ class Qwen3VLApp(QMainWindow):
                 )
             ''')
             
+            # Migration: Kiểm tra và thêm cột ocr_result_json nếu chưa có
+            try:
+                cursor.execute("PRAGMA table_info(ocr_history)")
+                columns = [row[1] for row in cursor.fetchall()]
+                
+                if 'ocr_result_json' not in columns:
+                    print(f"[Database] Migration: Thêm cột ocr_result_json vào bảng ocr_history...")
+                    cursor.execute('ALTER TABLE ocr_history ADD COLUMN ocr_result_json TEXT')
+                    conn.commit()
+                    print(f"[Database] Migration: Đã thêm cột ocr_result_json thành công")
+                else:
+                    print(f"[Database] Cột ocr_result_json đã tồn tại")
+            except Exception as migration_error:
+                print(f"[Database] Lỗi khi migration: {migration_error}")
+            
             conn.commit()
             conn.close()
             print(f"[Database] Đã khởi tạo database: {self.db_path}")
         except Exception as e:
             print(f"[Database] Lỗi khi khởi tạo database: {e}")
+            import traceback
+            traceback.print_exc()
     
     def create_thumbnail(self, image_path, max_size=(200, 200)):
         """Tạo thumbnail/preview image"""
