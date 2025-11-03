@@ -1623,7 +1623,7 @@ class Qwen3VLApp(QMainWindow):
         left_panel.setContentsMargins(12, 12, 12, 12)  # Padding đồng đều
         
         # Model loading section
-        model_group = QGroupBox("🤖 Cấu Hình Model")
+        model_group = QGroupBox("Cấu Hình Model")
         model_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -1676,7 +1676,7 @@ class Qwen3VLApp(QMainWindow):
         model_selection_layout.addWidget(self.model_combo)
         model_layout.addLayout(model_selection_layout)
         
-        self.model_label = QLabel("📦 Trạng thái: Chưa tải model")
+        self.model_label = QLabel("Trạng thái: Chưa tải model")
         self.model_label.setStyleSheet("""
             color: #7f8c8d;
             font-size: 9pt;
@@ -1690,7 +1690,7 @@ class Qwen3VLApp(QMainWindow):
         self.update_model_label()
         
         # Auto-load checkbox
-        self.auto_load_checkbox = QCheckBox("⚡ Tự động load model khi khởi động")
+        self.auto_load_checkbox = QCheckBox("Tự động load model khi khởi động")
         self.auto_load_checkbox.setChecked(False)
         self.auto_load_checkbox.stateChanged.connect(self.on_auto_load_changed)
         self.auto_load_checkbox.setToolTip("Khuyến nghị: TẮT để tránh crash khi khởi động\nNếu BẬT, model sẽ tự động load khi đáp ứng đủ yêu cầu hệ thống")
@@ -1755,7 +1755,7 @@ class Qwen3VLApp(QMainWindow):
         self.device_info = QLabel("")
         cuda_info = get_cuda_info()
         if cuda_info['available']:
-            info_text = f"💻 {cuda_info['device_name']}\n🔧 CUDA: {cuda_info['cuda_version']} | PyTorch: {cuda_info['pytorch_version']}"
+            info_text = f"{cuda_info['device_name']}\nCUDA: {cuda_info['cuda_version']} | PyTorch: {cuda_info['pytorch_version']}"
             self.device_info.setText(info_text)
             
             # Show CUDA compatibility warning if exists
@@ -1779,7 +1779,7 @@ class Qwen3VLApp(QMainWindow):
                     border-radius: 5px;
                 """)
         else:
-            self.device_info.setText("💻 Chế độ CPU\n⚠️ Không có GPU")
+            self.device_info.setText("Chế độ CPU\nKhông có GPU")
             self.device_info.setStyleSheet("""
                 color: #7f8c8d;
                 font-size: 9pt;
@@ -1795,7 +1795,7 @@ class Qwen3VLApp(QMainWindow):
         if cuda_info['available']:
             # Check for CUDA warnings
             if cuda_info.get('warnings'):
-                warning_text = "⚠️ " + cuda_info['warnings'][0]
+                warning_text = cuda_info['warnings'][0]
                 self.device_recommendation.setText(warning_text)
                 self.device_recommendation.setStyleSheet("""
                     color: #e67e22;
@@ -1811,7 +1811,7 @@ class Qwen3VLApp(QMainWindow):
                 # Show detailed popup warning on startup
                 QTimer.singleShot(1000, lambda: self.show_cuda_warning(cuda_info['warnings']))
             else:
-                self.device_recommendation.setText("✅ Khuyến nghị: Sử dụng GPU để có kết quả nhanh và tốt hơn")
+                self.device_recommendation.setText("Khuyến nghị: Sử dụng GPU để có kết quả nhanh và tốt hơn")
                 self.device_recommendation.setStyleSheet("""
                     color: #27ae60;
                     font-size: 9pt;
@@ -1820,7 +1820,7 @@ class Qwen3VLApp(QMainWindow):
                     border-radius: 5px;
                 """)
         else:
-            self.device_recommendation.setText("⚠️ Không có GPU - Sẽ sử dụng CPU (chậm hơn)")
+            self.device_recommendation.setText("Không có GPU - Sẽ sử dụng CPU (chậm hơn)")
             self.device_recommendation.setStyleSheet("""
                 color: #e67e22;
                 font-size: 9pt;
@@ -1835,7 +1835,7 @@ class Qwen3VLApp(QMainWindow):
         buttons_layout = QVBoxLayout()
         buttons_layout.setSpacing(8)
         
-        self.load_model_btn = QPushButton("🚀 Tải Model")
+        self.load_model_btn = QPushButton("Tải Model")
         self.load_model_btn.clicked.connect(self.load_model)
         self.load_model_btn.setStyleSheet("""
             QPushButton {
@@ -1860,7 +1860,7 @@ class Qwen3VLApp(QMainWindow):
         """)
         buttons_layout.addWidget(self.load_model_btn)
         
-        self.unload_model_btn = QPushButton("🗑️ Gỡ Model")
+        self.unload_model_btn = QPushButton("Gỡ Model")
         self.unload_model_btn.clicked.connect(self.unload_model)
         self.unload_model_btn.setEnabled(False)
         self.unload_model_btn.setStyleSheet("""
@@ -1887,7 +1887,7 @@ class Qwen3VLApp(QMainWindow):
         buttons_layout.addWidget(self.unload_model_btn)
         model_layout.addLayout(buttons_layout)
         
-        self.model_status = QLabel("⏳ Trạng thái: Chưa tải model")
+        self.model_status = QLabel("Trạng thái: Chưa tải model")
         self.model_status.setStyleSheet("""
             color: #7f8c8d;
             font-size: 10pt;
@@ -1905,7 +1905,7 @@ class Qwen3VLApp(QMainWindow):
         left_panel.addWidget(model_group)
         
         # Generation parameters - MOVED TO COLUMN 1
-        params_group = QGroupBox("⚙️ Tham Số Generation")
+        params_group = QGroupBox("Tham Số Generation")
         params_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -1964,7 +1964,7 @@ If any information is not found, please return a null or empty string for that k
         self.prompt_combo.currentTextChanged.connect(self.on_prompt_changed)
         
         # Nút điền prompt mặc định vào custom prompt
-        use_default_btn = QPushButton("📝 Sử dụng prompt mặc định")
+        use_default_btn = QPushButton("Sử dụng prompt mặc định")
         use_default_btn.clicked.connect(self.on_use_default_prompt)
         use_default_btn.setStyleSheet("""
             QPushButton {
