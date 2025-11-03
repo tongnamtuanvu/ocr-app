@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                               QFileDialog, QProgressBar, QGroupBox, QSpinBox,
                               QDoubleSpinBox, QCheckBox, QComboBox, QMessageBox,
                               QProgressDialog, QTabWidget, QListWidget, QListWidgetItem,
-                              QSplitter, QScrollArea, QSizePolicy, QGridLayout)
+                              QSplitter, QScrollArea, QSizePolicy)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize, QRect, QPoint, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor
 # Lazy import torch and transformers để tăng tốc khởi động
@@ -1741,6 +1741,104 @@ class Qwen3VLApp(QMainWindow):
         model_group.setLayout(model_layout)
         left_panel.addWidget(model_group)
         
+        # Generation parameters - MOVED TO COLUMN 1
+        params_group = QGroupBox("Tham Số Generation")
+        params_layout = QVBoxLayout()
+        
+        # Prompt selection
+        prompt_layout = QHBoxLayout()
+        prompt_layout.addWidget(QLabel("Tác vụ:"))
+        self.prompt_combo = QComboBox()
+        # New structured prompt for Vietnamese official documents
+        default_prompt = '''You are an expert in analyzing Vietnamese official documents. Your task is to carefully read the document from the provided image(s) and extract the following specific information.
+
+Please return the output in a structured JSON format. The JSON object should contain the following keys:
+
+- "loai_van_ban": The type of the document (e.g., "Nghị định", "Quyết định", "Thông tư", "Công văn").
+- "so_ky_hieu": The official reference number of the document.
+- "trich_yeu": A brief summary or subject of the document's content ("Trích yếu nội dung").
+- "co_quan_ban_hanh": The name of the issuing authority or organization.
+- "ngay_ban_hanh": The date of issue in "dd/mm/yyyy" format.
+
+If any information is not found, please return a null or empty string for that key. Do not add any extra text or explanations outside of the JSON object.'''
+        self.prompt_combo.addItem(default_prompt)
+        self.prompt_combo.setEditable(False)  # Không cho phép chỉnh sửa
+        self.prompt_combo.currentTextChanged.connect(self.on_prompt_changed)
+        
+        # Nút điền prompt mặc định vào custom prompt
+        use_default_btn = QPushButton("Sử dụng prompt mặc định")
+        use_default_btn.clicked.connect(self.on_use_default_prompt)
+        prompt_layout.addWidget(self.prompt_combo)
+        prompt_layout.addWidget(use_default_btn)
+        params_layout.addLayout(prompt_layout)
+        
+        # Custom prompt input
+        self.custom_prompt = QTextEdit()
+        self.custom_prompt.setPlaceholderText("Nhập prompt tùy chỉnh tại đây... (Để trống sẽ dùng prompt mặc định)")
+        self.custom_prompt.setMaximumHeight(60)
+        params_layout.addWidget(self.custom_prompt)
+        
+        # Max new tokens
+        max_tokens_layout = QHBoxLayout()
+        max_tokens_layout.addWidget(QLabel("Số tokens tối đa:"))
+        self.max_tokens_spin = QSpinBox()
+        self.max_tokens_spin.setRange(1, 16384)
+        self.max_tokens_spin.setValue(3000)
+        self.max_tokens_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        max_tokens_layout.addWidget(self.max_tokens_spin)
+        max_tokens_layout.addStretch()  # Push to left
+        params_layout.addLayout(max_tokens_layout)
+        
+        # Temperature
+        temp_layout = QHBoxLayout()
+        temp_layout.addWidget(QLabel("Temperature:"))
+        self.temperature_spin = QDoubleSpinBox()
+        self.temperature_spin.setRange(0.0, 2.0)
+        self.temperature_spin.setSingleStep(0.1)
+        self.temperature_spin.setValue(0.2)
+        self.temperature_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        temp_layout.addWidget(self.temperature_spin)
+        temp_layout.addStretch()  # Push to left
+        params_layout.addLayout(temp_layout)
+        
+        # Top-p
+        top_p_layout = QHBoxLayout()
+        top_p_layout.addWidget(QLabel("Top-p:"))
+        self.top_p_spin = QDoubleSpinBox()
+        self.top_p_spin.setRange(0.0, 1.0)
+        self.top_p_spin.setSingleStep(0.1)
+        self.top_p_spin.setValue(0.8)
+        self.top_p_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        top_p_layout.addWidget(self.top_p_spin)
+        top_p_layout.addStretch()  # Push to left
+        params_layout.addLayout(top_p_layout)
+        
+        # Top-k
+        top_k_layout = QHBoxLayout()
+        top_k_layout.addWidget(QLabel("Top-k:"))
+        self.top_k_spin = QSpinBox()
+        self.top_k_spin.setRange(1, 100)
+        self.top_k_spin.setValue(20)
+        self.top_k_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        top_k_layout.addWidget(self.top_k_spin)
+        top_k_layout.addStretch()  # Push to left
+        params_layout.addLayout(top_k_layout)
+        
+        # Repetition penalty
+        rep_penalty_layout = QHBoxLayout()
+        rep_penalty_layout.addWidget(QLabel("Hệ số lặp lại:"))
+        self.rep_penalty_spin = QDoubleSpinBox()
+        self.rep_penalty_spin.setRange(1.0, 2.0)
+        self.rep_penalty_spin.setSingleStep(0.1)
+        self.rep_penalty_spin.setValue(1.0)
+        self.rep_penalty_spin.setMinimumWidth(100)  # Đảm bảo hiển thị
+        rep_penalty_layout.addWidget(self.rep_penalty_spin)
+        rep_penalty_layout.addStretch()  # Push to left
+        params_layout.addLayout(rep_penalty_layout)
+        
+        params_group.setLayout(params_layout)
+        left_panel.addWidget(params_group)
+        
         # Add stretch to push content to top
         left_panel.addStretch()
         left_panel_widget.setLayout(left_panel)
@@ -1748,9 +1846,9 @@ class Qwen3VLApp(QMainWindow):
         # Set scroll area widget
         left_scroll.setWidget(left_panel_widget)
         
-        # Set minimum width for left panel
-        left_scroll.setMinimumWidth(250)
-        left_scroll.setMaximumWidth(400)
+        # Set minimum width for left panel - increased to fit params
+        left_scroll.setMinimumWidth(300)  # Tăng từ 250 lên 300
+        left_scroll.setMaximumWidth(500)  # Tăng từ 400 lên 500
         left_scroll.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         
         # Column 2 (Middle) - File preview, ROI, and upload controls with scroll
@@ -1872,105 +1970,7 @@ class Qwen3VLApp(QMainWindow):
         right_panel.setSpacing(15)
         right_panel.setContentsMargins(10, 10, 10, 10)
         
-        # Generation parameters
-        params_group = QGroupBox("Tham Số Generation")
-        params_layout = QVBoxLayout()
-        
-        # Prompt selection
-        prompt_layout = QHBoxLayout()
-        prompt_layout.addWidget(QLabel("Tác vụ:"))
-        self.prompt_combo = QComboBox()
-        # New structured prompt for Vietnamese official documents
-        default_prompt = '''You are an expert in analyzing Vietnamese official documents. Your task is to carefully read the document from the provided image(s) and extract the following specific information.
-
-Please return the output in a structured JSON format. The JSON object should contain the following keys:
-
-- "loai_van_ban": The type of the document (e.g., "Nghị định", "Quyết định", "Thông tư", "Công văn").
-- "so_ky_hieu": The official reference number of the document.
-- "trich_yeu": A brief summary or subject of the document's content ("Trích yếu nội dung").
-- "co_quan_ban_hanh": The name of the issuing authority or organization.
-- "ngay_ban_hanh": The date of issue in "dd/mm/yyyy" format.
-
-If any information is not found, please return a null or empty string for that key. Do not add any extra text or explanations outside of the JSON object.'''
-        self.prompt_combo.addItem(default_prompt)
-        self.prompt_combo.setEditable(False)  # Không cho phép chỉnh sửa
-        self.prompt_combo.currentTextChanged.connect(self.on_prompt_changed)
-        
-        # Nút điền prompt mặc định vào custom prompt
-        use_default_btn = QPushButton("Sử dụng prompt mặc định")
-        use_default_btn.clicked.connect(self.on_use_default_prompt)
-        prompt_layout.addWidget(self.prompt_combo)
-        prompt_layout.addWidget(use_default_btn)
-        params_layout.addLayout(prompt_layout)
-        
-        # Custom prompt input
-        self.custom_prompt = QTextEdit()
-        self.custom_prompt.setPlaceholderText("Nhập prompt tùy chỉnh tại đây... (Để trống sẽ dùng prompt mặc định)")
-        self.custom_prompt.setMaximumHeight(60)
-        params_layout.addWidget(self.custom_prompt)
-        
-        # Grid layout for parameters (2 columns) to save space
-        params_grid = QGridLayout()
-        params_grid.setSpacing(5)  # Giảm spacing xuống 5
-        params_grid.setColumnStretch(1, 0)  # Không stretch cho value columns
-        params_grid.setColumnStretch(3, 0)
-        params_grid.setColumnMinimumWidth(0, 65)   # Label column 1 - giảm xuống
-        params_grid.setColumnMinimumWidth(1, 60)   # Value column 1 - giảm xuống
-        params_grid.setColumnMinimumWidth(2, 60)   # Label column 2 - giảm xuống
-        params_grid.setColumnMinimumWidth(3, 60)   # Value column 2 - giảm xuống
-        
-        # Row 0: Max tokens | Temperature
-        params_grid.addWidget(QLabel("Tokens:"), 0, 0)
-        self.max_tokens_spin = QSpinBox()
-        self.max_tokens_spin.setRange(1, 16384)
-        self.max_tokens_spin.setValue(3000)
-        self.max_tokens_spin.setMinimumWidth(60)
-        self.max_tokens_spin.setMaximumWidth(70)  # Giới hạn max width
-        params_grid.addWidget(self.max_tokens_spin, 0, 1)
-        
-        params_grid.addWidget(QLabel("Temp:"), 0, 2)
-        self.temperature_spin = QDoubleSpinBox()
-        self.temperature_spin.setRange(0.0, 2.0)
-        self.temperature_spin.setSingleStep(0.1)
-        self.temperature_spin.setValue(0.2)
-        self.temperature_spin.setMinimumWidth(60)
-        self.temperature_spin.setMaximumWidth(70)
-        params_grid.addWidget(self.temperature_spin, 0, 3)
-        
-        # Row 1: Top-p | Top-k
-        params_grid.addWidget(QLabel("Top-p:"), 1, 0)
-        self.top_p_spin = QDoubleSpinBox()
-        self.top_p_spin.setRange(0.0, 1.0)
-        self.top_p_spin.setSingleStep(0.1)
-        self.top_p_spin.setValue(0.8)
-        self.top_p_spin.setMinimumWidth(60)
-        self.top_p_spin.setMaximumWidth(70)
-        params_grid.addWidget(self.top_p_spin, 1, 1)
-        
-        params_grid.addWidget(QLabel("Top-k:"), 1, 2)
-        self.top_k_spin = QSpinBox()
-        self.top_k_spin.setRange(1, 100)
-        self.top_k_spin.setValue(20)
-        self.top_k_spin.setMinimumWidth(60)
-        self.top_k_spin.setMaximumWidth(70)
-        params_grid.addWidget(self.top_k_spin, 1, 3)
-        
-        # Row 2: Repetition penalty (span 2 columns)
-        params_grid.addWidget(QLabel("Rep. Penalty:"), 2, 0)
-        self.rep_penalty_spin = QDoubleSpinBox()
-        self.rep_penalty_spin.setRange(1.0, 2.0)
-        self.rep_penalty_spin.setSingleStep(0.1)
-        self.rep_penalty_spin.setValue(1.0)
-        self.rep_penalty_spin.setMinimumWidth(60)
-        self.rep_penalty_spin.setMaximumWidth(70)
-        params_grid.addWidget(self.rep_penalty_spin, 2, 1)
-        
-        params_layout.addLayout(params_grid)
-        
-        params_group.setLayout(params_layout)
-        right_panel.addWidget(params_group, 3)  # Stretch factor 3 for params - ưu tiên hiển thị params
-        
-        # Process button
+        # Process button - moved to top since params are now in column 1
         self.process_btn = QPushButton("Xử Lý Hình Ảnh")
         self.process_btn.setObjectName("process_btn")
         self.process_btn.clicked.connect(self.process_image)
@@ -2003,16 +2003,14 @@ If any information is not found, please return a null or empty string for that k
         self.output_text.setPlaceholderText("Kết quả sẽ hiển thị tại đây...")
         # Make output text expandable and set flexible minimum height
         self.output_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.output_text.setMinimumHeight(150)  # Giảm xuống 150 để button có chỗ
+        self.output_text.setMinimumHeight(200)  # Giảm từ 250 xuống 200 để params có chỗ hơn
         # Enable word wrap for better text display
         self.output_text.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
-        output_layout.addWidget(self.output_text, 1)  # Stretch factor 1
+        output_layout.addWidget(self.output_text)
         
         # Save output button
         self.save_output_btn = QPushButton("Lưu Kết Quả Ra File")
         self.save_output_btn.clicked.connect(self.save_output)
-        self.save_output_btn.setMinimumHeight(35)  # Đảm bảo button hiển thị rõ
-        self.save_output_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         output_layout.addWidget(self.save_output_btn)
         
         output_group.setLayout(output_layout)
