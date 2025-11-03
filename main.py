@@ -1958,14 +1958,14 @@ If any information is not found, please return a null or empty string for that k
         params_layout.addLayout(rep_penalty_layout)
         
         params_group.setLayout(params_layout)
-        right_panel.addWidget(params_group, 1)  # Stretch factor 1 for params
+        right_panel.addWidget(params_group, 2)  # Stretch factor 2 for params (tăng từ 1 lên 2)
         
         # Process button
         self.process_btn = QPushButton("Xử Lý Hình Ảnh")
         self.process_btn.setObjectName("process_btn")
         self.process_btn.clicked.connect(self.process_image)
         self.process_btn.setEnabled(False)
-        right_panel.addWidget(self.process_btn)
+        right_panel.addWidget(self.process_btn, 0)  # No stretch for button
         
         # Progress bar
         self.progress_bar = QProgressBar()
@@ -2007,8 +2007,8 @@ If any information is not found, please return a null or empty string for that k
         # Set stretch factor so output section takes more space
         right_panel.addWidget(output_group, 3)  # Stretch factor 3 for output
         
-        # Add stretch to push content to top
-        right_panel.addStretch(1)  # Smaller stretch for remaining space
+        # Remove stretch - let params and output share space naturally
+        # right_panel.addStretch(1)  # Removed to show params properly
         right_panel_widget.setLayout(right_panel)
         
         # Set scroll area widget
