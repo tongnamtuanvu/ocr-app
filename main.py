@@ -1958,29 +1958,29 @@ If any information is not found, please return a null or empty string for that k
         params_layout.addLayout(rep_penalty_layout)
         
         params_group.setLayout(params_layout)
-        right_panel.addWidget(params_group, 2)  # Stretch factor 2 for params (tăng từ 1 lên 2)
+        right_panel.addWidget(params_group, 3)  # Stretch factor 3 for params - ưu tiên hiển thị params
         
         # Process button
         self.process_btn = QPushButton("Xử Lý Hình Ảnh")
         self.process_btn.setObjectName("process_btn")
         self.process_btn.clicked.connect(self.process_image)
         self.process_btn.setEnabled(False)
-        right_panel.addWidget(self.process_btn, 0)  # No stretch for button
+        right_panel.addWidget(self.process_btn)  # No stretch
         
         # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
-        right_panel.addWidget(self.progress_bar)
+        right_panel.addWidget(self.progress_bar)  # No stretch
         
         # Progress label
         self.progress_label = QLabel("")
         self.progress_label.setStyleSheet("color: #2c3e50; font-size: 10pt; padding: 5px;")
-        right_panel.addWidget(self.progress_label)
+        right_panel.addWidget(self.progress_label)  # No stretch
         
         # Processing time label
         self.processing_time_label = QLabel("Thời gian xử lý: Chưa bắt đầu")
         self.processing_time_label.setStyleSheet("color: #7f8c8d; font-size: 11pt; font-weight: bold; padding: 8px; background-color: white; border-radius: 8px;")
-        right_panel.addWidget(self.processing_time_label)
+        right_panel.addWidget(self.processing_time_label)  # No stretch
         
         # Output section - Make it bigger
         output_group = QGroupBox("Kết Quả")
@@ -1993,7 +1993,7 @@ If any information is not found, please return a null or empty string for that k
         self.output_text.setPlaceholderText("Kết quả sẽ hiển thị tại đây...")
         # Make output text expandable and set flexible minimum height
         self.output_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.output_text.setMinimumHeight(250)  # Very flexible minimum height
+        self.output_text.setMinimumHeight(200)  # Giảm từ 250 xuống 200 để params có chỗ hơn
         # Enable word wrap for better text display
         self.output_text.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         output_layout.addWidget(self.output_text)
@@ -2004,8 +2004,8 @@ If any information is not found, please return a null or empty string for that k
         output_layout.addWidget(self.save_output_btn)
         
         output_group.setLayout(output_layout)
-        # Set stretch factor so output section takes more space
-        right_panel.addWidget(output_group, 3)  # Stretch factor 3 for output
+        # Set stretch factor - balanced with params
+        right_panel.addWidget(output_group, 2)  # Stretch factor 2 for output (giảm từ 3 xuống 2)
         
         # Remove stretch - let params and output share space naturally
         # right_panel.addStretch(1)  # Removed to show params properly
