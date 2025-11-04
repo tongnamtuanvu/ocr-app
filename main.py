@@ -269,18 +269,26 @@ class ImageROILabel(QLabel):
                     int(self.roi_rect.height() * scale_y)
                 )
             
-            # Draw semi-transparent overlay
-            overlay_color = QColor(0, 123, 255, 100)  # Blue with transparency
-            painter.fillRect(scaled_pixmap.rect(), overlay_color)
+            # Draw semi-transparent overlay outside ROI (glass effect)
+            # Tạo hiệu ứng mờ nhẹ bên ngoài, trong suốt bên trong
+            overlay_color = QColor(0, 0, 0, 120)  # Đen nhẹ với độ trong suốt
             
-            # Draw ROI rectangle with border
-            pen = QPen(QColor(0, 123, 255), 3)
+            # Vẽ 4 hình chữ nhật bao quanh ROI (top, bottom, left, right)
+            # Top rectangle
+            painter.fillRect(QRect(0, 0, scaled_pixmap.width(), roi_scaled.top()), overlay_color)
+            # Bottom rectangle
+            painter.fillRect(QRect(0, roi_scaled.bottom(), scaled_pixmap.width(), 
+                                  scaled_pixmap.height() - roi_scaled.bottom()), overlay_color)
+            # Left rectangle
+            painter.fillRect(QRect(0, roi_scaled.top(), roi_scaled.left(), roi_scaled.height()), overlay_color)
+            # Right rectangle
+            painter.fillRect(QRect(roi_scaled.right(), roi_scaled.top(), 
+                                  scaled_pixmap.width() - roi_scaled.right(), roi_scaled.height()), overlay_color)
+            
+            # Draw ROI rectangle border (viền đẹp)
+            pen = QPen(QColor(0, 255, 0), 2)  # Viền xanh lá sáng
             painter.setPen(pen)
             painter.drawRect(roi_scaled)
-            
-            # Clear inside ROI
-            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
-            painter.fillRect(roi_scaled, QColor(0, 0, 0, 0))
             
             painter.end()
         
